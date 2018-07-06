@@ -1,5 +1,8 @@
 package com.sonelli.juicessh.performancemonitor.activities;
 
+import android.annotation.TargetApi;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -7,12 +10,16 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Html;
+import android.text.Spanned;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -20,6 +27,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.bezyapps.floatieslibrary.Floaty;
 import com.sonelli.juicessh.performancemonitor.R;
 import com.sonelli.juicessh.performancemonitor.adapters.ConnectionSpinnerAdapter;
 import com.sonelli.juicessh.performancemonitor.controllers.BaseController;
@@ -76,6 +84,9 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
     private volatile String sessionKey;
     private volatile boolean isConnected = false;
 
+    Floaty floaty;
+    private static final int NOTIFICATION_ID = 1500;
+    public static final int PERMISSION_REQUEST_CODE = 16;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,7 +94,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
         setContentView(R.layout.activity_main);
 
         PreferenceHelper preferenceHelper = new PreferenceHelper(this);
-        if(preferenceHelper.getKeepScreenOnFlag()){
+        if (preferenceHelper.getKeepScreenOnFlag()) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
 
@@ -102,11 +113,24 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
         this.networkUsageTextView = (AutoResizeTextView) findViewById(R.id.network_usage);
         this.diskUsageTextView = (AutoResizeTextView) findViewById(R.id.disk_usage);
 
+        Intent intent = new Intent(this, MainActivity.class);
+        PendingIntent resultPendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        Notification notification = Floaty.createNotification(this, "JuiceSSH PerfMon", "Service Running", R.drawable.ic_launcher, resultPendingIntent);
+
+        View head = LayoutInflater.from(this).inflate(R.layout.float_head, null);
+        View body = LayoutInflater.from(this).inflate(R.layout.float_head, null);
+        floaty = Floaty.createInstance(this, head, body, NOTIFICATION_ID, notification);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            startFloatyForAboveAndroidL();
+        } else {
+            floaty.startService();
+        }
+
         this.connectButton = (Button) findViewById(R.id.connect_button);
         Drawable drawable = getDrawable(R.drawable.login);
         if (drawable != null) {
-            drawable.setBounds(0, 0, (int)(drawable.getIntrinsicWidth()*0.2),
-                    (int)(drawable.getIntrinsicHeight()*0.2));
+            drawable.setBounds(0, 0, (int) (drawable.getIntrinsicWidth() * 0.2),
+                    (int) (drawable.getIntrinsicHeight() * 0.2));
         }
         connectButton.setCompoundDrawables(drawable, null, null, null);
         connectButton.setOnClickListener(new View.OnClickListener() {
@@ -114,8 +138,8 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
             public void onClick(View view) {
 
                 final UUID id = spinnerAdapter.getConnectionId(getSupportActionBar().getSelectedNavigationIndex());
-                if(id != null){
-                    if(isClientStarted){
+                if (id != null) {
+                    if (isClientStarted) {
                         connectButton.setText(R.string.connecting);
                         connectButton.setEnabled(false);
                         new Thread(new Runnable() {
@@ -123,7 +147,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
                             public void run() {
                                 try {
                                     client.connect(MainActivity.this, id, MainActivity.this, JUICESSH_REQUEST_CODE);
-                                } catch (ServiceNotConnectedException e){
+                                } catch (ServiceNotConnectedException e) {
                                     Toast.makeText(MainActivity.this, "Could not connect to JuiceSSH Plugin Service", Toast.LENGTH_SHORT).show();
                                 }
                             }
@@ -137,15 +161,15 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
         this.disconnectButton = (Button) findViewById(R.id.disconnect_button);
         Drawable drawable1 = getDrawable(R.drawable.logout);
         if (drawable1 != null) {
-            drawable1.setBounds(0, 0, (int)(drawable1.getIntrinsicWidth()*0.2),
-                    (int)(drawable1.getIntrinsicHeight()*0.2));
+            drawable1.setBounds(0, 0, (int) (drawable1.getIntrinsicWidth() * 0.2),
+                    (int) (drawable1.getIntrinsicHeight() * 0.2));
         }
         disconnectButton.setCompoundDrawables(drawable1, null, null, null);
         this.disconnectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(sessionId > -1 && sessionKey != null){
-                    if(isClientStarted){
+                if (sessionId > -1 && sessionKey != null) {
+                    if (isClientStarted) {
                         disconnectButton.setText(R.string.disconnecting);
                         disconnectButton.setEnabled(false);
                         new Thread(new Runnable() {
@@ -153,7 +177,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
                             public void run() {
                                 try {
                                     client.disconnect(sessionId, sessionKey);
-                                } catch (ServiceNotConnectedException e){
+                                } catch (ServiceNotConnectedException e) {
                                     Toast.makeText(MainActivity.this, "Could not connect to JuiceSSH Plugin Service", Toast.LENGTH_SHORT).show();
                                 }
                                 disconnectButton.post(new Runnable() {
@@ -176,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
     protected void onResume() {
         super.onResume();
 
-        if(loadAverageTextView != null)
+        if (loadAverageTextView != null)
             loadAverageTextView.resizeText();
 
         try {
@@ -195,17 +219,17 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
                 // This keeps DB activity async and off the UI thread to prevent the plugin lagging
                 getSupportLoaderManager().initLoader(0, null, new ConnectionListLoader(this, spinnerAdapter));
 
-                if(!isClientStarted) {
+                if (!isClientStarted) {
                     startPluginClient();
                 }
 
             }
 
-        } catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             Log.e(TAG, "JuiceSSH is not installed. Plugin Library will prompt user to install from the Play Store.");
         }
 
-        if(this.isConnected){
+        if (this.isConnected) {
             connectButton.setVisibility(View.GONE);
             disconnectButton.setVisibility(View.VISIBLE);
         } else {
@@ -219,16 +243,18 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
     protected void onDestroy() {
         super.onDestroy();
 
-        if(isClientStarted) {
-            if (isConnected){
+        if (isClientStarted) {
+            if (isConnected) {
                 try {
                     client.disconnect(sessionId, sessionKey);
                 } catch (ServiceNotConnectedException e) {
                     Log.e(TAG, "Failed to disconnect JuiceSSH session used performance monitor plugin");
                 }
-             }
+            }
             client.stop(this);
         }
+
+        floaty.stopService();
     }
 
     @Override
@@ -249,8 +275,17 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
 
         // This is important if you want to be able to interact with JuiceSSH sessions that you
         // have started otherwise the plugin won't have access.
-        if(requestCode == JUICESSH_REQUEST_CODE){
+        if (requestCode == JUICESSH_REQUEST_CODE) {
             client.gotActivityResult(requestCode, resultCode, data);
+        }
+
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (Settings.canDrawOverlays(this)) {
+                floaty.startService();
+            } else {
+                Spanned message = Html.fromHtml("Please allow this permission, so <b>Floaties</b> could be drawn.");
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+            }
         }
     }
 
@@ -271,7 +306,8 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
         // Register a listener for session finish events so that we know when the session has been disconnected
         try {
             client.addSessionFinishedListener(sessionId, sessionKey, this);
-        } catch (ServiceNotConnectedException ignored){}
+        } catch (ServiceNotConnectedException ignored) {
+        }
 
         this.loadAverageController = new LoadAverageController(this)
                 .setSessionId(sessionId)
@@ -323,23 +359,23 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
         MainActivity.this.sessionKey = null;
         MainActivity.this.isConnected = false;
 
-        if(loadAverageController != null){
+        if (loadAverageController != null) {
             loadAverageController.stop();
         }
 
-        if(freeRamController != null){
+        if (freeRamController != null) {
             freeRamController.stop();
         }
 
-        if(cpuUsageController != null){
+        if (cpuUsageController != null) {
             cpuUsageController.stop();
         }
 
-        if(diskUsageController != null){
+        if (diskUsageController != null) {
             diskUsageController.stop();
         }
 
-        if(networkUsageController != null){
+        if (networkUsageController != null) {
             networkUsageController.stop();
         }
 
@@ -367,7 +403,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
     public boolean onOptionsItemSelected(MenuItem item) {
 
 
-        switch(item.getItemId()){
+        switch (item.getItemId()) {
 
             case R.id.fork_on_github:
                 Intent urlIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.app_url)));
@@ -379,9 +415,9 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
                 item.setChecked(!item.isChecked());
                 PreferenceHelper preferenceHelper = new PreferenceHelper(this);
                 preferenceHelper.setKeepScreenOnFlag(item.isChecked());
-                if(item.isChecked()) {
+                if (item.isChecked()) {
                     getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-                }else{
+                } else {
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 }
                 return true;
@@ -392,7 +428,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
                 intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
                 try {
                     startActivity(intent);
-                } catch (ActivityNotFoundException e){
+                } catch (ActivityNotFoundException e) {
                     Toast.makeText(this, getString(R.string.google_play_not_installed), Toast.LENGTH_SHORT).show();
                 }
                 return true;
@@ -414,15 +450,15 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
         switch (requestCode) {
             case REQUESTID_PERMISSIONS: {
                 // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 1  && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.length > 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
 
                     getSupportLoaderManager().initLoader(0, null, new ConnectionListLoader(this, spinnerAdapter));
-                    if(!isClientStarted) {
+                    if (!isClientStarted) {
                         startPluginClient();
                     }
 
                 } else {
-                    if(Build.VERSION.SDK_INT < 23){
+                    if (Build.VERSION.SDK_INT < 23) {
                         // We haven't been granted permission, but we're running on a version of Android
                         // that doesn't support dynamic permissions requests. This can only happen if the
                         // plugin was installed before JuiceSSH (so can't find the permissions).
@@ -437,7 +473,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
 
     }
 
-    public void startPluginClient(){
+    public void startPluginClient() {
 
         client.start(this, new OnClientStartedListener() {
             @Override
@@ -456,8 +492,15 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
 
     }
 
-
-
-
+    @TargetApi(Build.VERSION_CODES.M)
+    public void startFloatyForAboveAndroidL() {
+        if (!Settings.canDrawOverlays(this)) {
+            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName()));
+            startActivityForResult(intent, PERMISSION_REQUEST_CODE);
+        } else {
+            floaty.startService();
+        }
+    }
 
 }

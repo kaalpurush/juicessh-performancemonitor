@@ -4,6 +4,8 @@ import android.content.Context;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bezyapps.floatieslibrary.Floaty;
+import com.sonelli.juicessh.performancemonitor.R;
 import com.sonelli.juicessh.pluginlibrary.PluginClient;
 
 import java.lang.ref.WeakReference;
@@ -25,28 +27,28 @@ public abstract class BaseController {
         this.context = new WeakReference<>(context);
     }
 
-    public BaseController setSessionId(int sessionId){
+    public BaseController setSessionId(int sessionId) {
         this.sessionId = sessionId;
         return this;
     }
 
-    public BaseController setSessionKey(String sessionKey){
+    public BaseController setSessionKey(String sessionKey) {
         this.sessionKey = sessionKey;
         return this;
     }
 
-    public BaseController setPluginClient(PluginClient client){
+    public BaseController setPluginClient(PluginClient client) {
         this.client = client;
         return this;
     }
 
-    public BaseController setTextview(TextView textView){
+    public BaseController setTextview(TextView textView) {
         this.textView = textView;
         return this;
     }
 
-    public String getString(int resource){
-        if(context.get() != null){
+    public String getString(int resource) {
+        if (context.get() != null) {
             return context.get().getString(resource);
         } else {
             return null;
@@ -65,13 +67,16 @@ public abstract class BaseController {
         return client;
     }
 
-    public void setText(String string){
-        if(textView != null && !textView.getText().equals(string)){
+    public void setText(String string) {
+        if (textView != null && !textView.getText().equals(string)) {
             textView.setText(string);
+
+            if (textView.getId() == R.id.network_usage)
+                ((TextView) Floaty.getInstance().getHead().findViewById(R.id.tvInternetUsage)).setText(string);
         }
     }
 
-    public boolean isRunning(){
+    public boolean isRunning() {
         return isRunning.get();
     }
 
@@ -80,12 +85,12 @@ public abstract class BaseController {
         return this;
     }
 
-    public void stop(){
+    public void stop() {
         isRunning.set(false);
     }
 
     public void toast(String reason) {
-        if(context.get() != null){
+        if (context.get() != null) {
             Toast.makeText(context.get(), reason, Toast.LENGTH_SHORT).show();
         }
     }
