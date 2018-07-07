@@ -258,7 +258,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
         floaty.stopService();
     }
 
-    @Override
+/*    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -268,7 +268,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
         menu.findItem(R.id.keep_screen_on).setChecked(preferenceHelper.getKeepScreenOnFlag());
 
         return true;
-    }
+    }*/
 
     @TargetApi(Build.VERSION_CODES.M)
     @Override
