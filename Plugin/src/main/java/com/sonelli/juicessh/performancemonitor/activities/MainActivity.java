@@ -88,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
     private static final int NOTIFICATION_ID = 1500;
     public static final int PERMISSION_REQUEST_CODE = 16;
 
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -269,6 +270,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.OnNavig
         return true;
     }
 
+    @TargetApi(Build.VERSION_CODES.M)
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
